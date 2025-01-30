@@ -835,7 +835,7 @@ async function permutateStringsGroup(parts, strings, index) {
     filepath = path.dirname(filepath);
     filepath = path.normalize(filepath);
   } else {
-    filepath = path.resolve(__dirname);
+    filepath = path.resolve(process.cwd());
   }
   let outputPath = path.join(filepath, filename);
   const writeStream = stdOutArg
