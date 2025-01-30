@@ -1,3 +1,4 @@
+#!/bin/node
 const fs = require("fs");
 const path = require("path");
 const { Readable } = require("stream");
@@ -232,9 +233,9 @@ const prettyNumber = (
 
 const HELP_ARG = createArg("Help", "-h", "--help");
 const FILE_ARG = createArg(
-  "File",
-  "-f",
-  "--file",
+  "Output",
+  "-o",
+  "--output",
   "The output file. Defaults to the working directory.",
   true
 );
@@ -247,7 +248,7 @@ const LIMIT_ARG = createArg(
 );
 const FORMAT_ARG = createArg(
   "Format",
-  "-m",
+  "-f",
   "--format",
   'Describes the character set and format of the resulting output file.\n\t\t"blue" Insert static word blue into every combination.\n\t\t"[red,blue]" Iterate the words red and blue.\n\t\t"[0-9]" Iterate one character over 0-9.\n\t\t"[a-z]{4}" Iterate 4 characters over a-z.\n\t\t"[a-z,A-Z,0-9, ,:]{2}" Iterate 2 characters over a-zA-Z0-9 :.\n\t\t"[A-Z]{5,6}" Iterate 5-6 characters over A-Z.\n\t\t"[2020-2023]{11,12}" Iterate 11-12 characters over 2020-2023.\n\t\t"[%0] Iterate input wordlist, requires -w argument."\n\t\t[a-z]{2}[0-9]|[0-9] Iterate [a-z]{2}[0-9] entirely, then 0-9 entirely. | represents an OR operation. Can be infinitely. Shuffle only shuffles tokens within each OR block exclusively.\n\n\t\tExample\n\t\t"[0-9]blue[A-Z,a-z]{2,4}[red,blue]"\n\t\t\tFirst word would be 0blueAAred.\n\t\t\tLast word would be 9bluezzzzblue.',
   true
@@ -272,7 +273,7 @@ const GZIP_ARG = createArg(
 );
 const DUPLICATES_ARG = createArg(
   "Duplicates",
-  "-d",
+  "-du",
   "--duplicates",
   "Set the maximum times the same character can appear in a row on a single line.",
   true
@@ -299,7 +300,7 @@ const MAX_LENGTH_ARG = createArg(
 );
 const DEBUG_ARG = createArg(
   "Debug",
-  "-e",
+  "-d",
   "--debug",
   "Enable debug mode. Outputs debug information. Does not output words."
 );
@@ -335,6 +336,11 @@ const appArgs = [
   LIST_ARG,
 ];
 
+const log = (...args) => {
+  if (!hasArg(STD_OUT_ARG)) {
+    console.log(...args);
+  }
+};
 const instanceArgs = {};
 const addArg = (arg) => {
   if (!(arg.key in instanceArgs)) {
@@ -790,7 +796,7 @@ let currentStream;
 const closeStream = async () => {
   if (!currentStream?.closed) {
     await new Promise((resolve) => currentStream.end(resolve));
-    console.log(`Done.`);
+    log(`Done.`);
   }
 };
 const quitProcess = async () => {
@@ -813,7 +819,7 @@ const quitProcess = async () => {
   "SIGTERM",
 ].forEach((signal) => process.on(signal, quitProcess));
 
-process.on("error", console.log);
+process.on("error", console.error);
 
 async function permutateStringsGroup(parts, strings, index) {
   const extension = gzipArg ? ".gz" : "";
@@ -957,7 +963,7 @@ async function permutateStringsGroup(parts, strings, index) {
 
       lines += 1;
       if (!stdOutArg && lineCount >= 2000000 && lines % 1000000 === 0) {
-        console.log(
+        log(
           `Wrote line ${prettyNumber(lines + 1)}. ${
             Math.floor((lines / (lineCount * shufflePermutations)) * 1000000) /
             10000
@@ -975,12 +981,10 @@ async function permutateStringsGroup(parts, strings, index) {
   }
 
   if (debugArg) {
-    console.log(instanceArgs);
+    log(instanceArgs);
     console.dir(parts, { depth: null });
-    console.log(strings);
-    console.log(
-      `${prettyNumber(permutations * uniqueShufflePermutations)} lines.`
-    );
+    log(strings);
+    log(`${prettyNumber(permutations * uniqueShufflePermutations)} lines.`);
   }
 
   if (linesPerSecondArg) {
@@ -992,7 +996,7 @@ async function permutateStringsGroup(parts, strings, index) {
         (lineCount * shufflePermutations) / lps
       );
       const timeStr = prettyNumber(time);
-      console.log(`${timeStr} ${interval}.`);
+      log(`${timeStr} ${interval}.`);
     }
   }
 
@@ -1000,9 +1004,7 @@ async function permutateStringsGroup(parts, strings, index) {
     return;
   }
 
-  console.log(
-    `Writing ${prettyNumber(lineCount * shufflePermutations)} lines...`
-  );
+  log(`Writing ${prettyNumber(lineCount * shufflePermutations)} lines...`);
   const readStream = Readable.from(permutationGenerator());
   readStream.pipe(stream);
   readStream.on("end", closeStream);
