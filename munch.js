@@ -74,6 +74,15 @@ function unescape(token) {
   return token.replaceAll(/\\(.)/g, "$1");
 }
 
+function isComment(input = "") {
+  for (const char of ["#", "//"]) {
+    if (input.substring(0, char.length) === char) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function getPermutationDivisors(allArrays) {
   var divisors = [];
   for (var i = allArrays.length - 1; i >= 0; i--) {
@@ -232,6 +241,12 @@ const prettyNumber = (
 };
 
 const HELP_ARG = createArg("Help", "-h", "--help");
+const IGNORE_COMMENTS_ARG = createArg(
+  "Ignore Comments",
+  "-ic",
+  "--ignore-comments",
+  "Ignore lines with comments in input files."
+);
 const FILE_ARG = createArg(
   "Output",
   "-o",
@@ -334,6 +349,7 @@ const appArgs = [
   LINES_PER_SECOND_ARG,
   DEBUG_ARG,
   LIST_ARG,
+  IGNORE_COMMENTS_ARG,
 ];
 
 const log = (...args) => {
@@ -440,6 +456,7 @@ const maxArg = getArg(MAX_LENGTH_ARG);
 const debugArg = getArg(DEBUG_ARG);
 // const wordlistArg = getArg(LIST_ARG);
 const linesPerSecondArg = getArg(LINES_PER_SECOND_ARG);
+const ignoreCommentsArg = getArg(IGNORE_COMMENTS_ARG);
 const maxLines = limitArg?.value || -1;
 
 if (fileArg && stdOutArg) {
@@ -477,7 +494,18 @@ while (wordListExists) {
       process.exit();
     }
     const lineEndings = file.includes("\r\n") ? "\r\n" : "\n";
-    data = file.toString().split(lineEndings);
+
+    if (hasArg(IGNORE_COMMENTS_ARG)) {
+      data = [];
+      for (const line of file.toString().split(lineEndings)) {
+        if (isComment(line)) {
+          continue;
+        }
+        data.push(line);
+      }
+    } else {
+      data = file.toString().split(lineEndings);
+    }
   } else {
     data = wordlistObj[wordListArg?.value];
   }
@@ -502,7 +530,7 @@ const getWordList = (token) => {
 
 const createStatic = (token) => ({
   type: "static",
-  string: unescape(token),
+  string: token,
 });
 
 const createGenerative = (
@@ -716,12 +744,14 @@ function parseFormatGroup(format) {
                 process.exit();
               }
 
-              return wordlist
-                .map((s) => getAlternates(s))
-                .flat()
-                .map((t) => createStatic(t));
+              const lines = [];
+              for (const line of wordlist) {
+                const alternates = getAlternates(line);
+                lines = lines.concat(alternates.map(createStatic));
+              }
+              return lines;
             } else {
-              return getAlternates(token).map((t) => createStatic(t));
+              return getAlternates(token).map(createStatic);
             }
           }
           if (isWordListToken(token)) {
@@ -732,7 +762,8 @@ function parseFormatGroup(format) {
               );
               process.exit();
             }
-            return createStatic(wordlist);
+
+            return createStatic(lines);
           }
           return createStatic(token);
         }
