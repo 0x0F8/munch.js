@@ -762,8 +762,7 @@ function parseFormatGroup(format) {
               );
               process.exit();
             }
-
-            return createStatic(lines);
+            return createStatic(wordlist);
           }
           return createStatic(token);
         }
