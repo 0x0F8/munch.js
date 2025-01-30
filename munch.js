@@ -846,7 +846,7 @@ async function permutateStringsGroup(parts, strings, index) {
   if (gzipArg) {
     gzip.pipe(writeStream);
   }
-  currentStream = writeStream;
+  currentStream = gzip || writeStream;
 
   const permutations = getPermutationCount(strings);
   let divisors = getPermutationDivisors(strings);
