@@ -251,7 +251,7 @@ const FILE_ARG = createArg(
   "Output",
   "-o",
   "--output",
-  "The output file. Defaults to the working directory.",
+  "Output to file instead of stdout. Defaults to the working directory.",
   true
 );
 const LIMIT_ARG = createArg(
@@ -292,12 +292,6 @@ const DUPLICATES_ARG = createArg(
   "--duplicates",
   "Set the maximum times the same character can appear in a row on a single line.",
   true
-);
-const STD_OUT_ARG = createArg(
-  "Standard Out",
-  "-s",
-  "--stdout",
-  "Output to stdout instead of file."
 );
 const MIN_LENGTH_ARG = createArg(
   "Minimum Length",
@@ -343,7 +337,6 @@ const appArgs = [
   FORMAT_ARG,
   GZIP_ARG,
   DUPLICATES_ARG,
-  STD_OUT_ARG,
   MIN_LENGTH_ARG,
   MAX_LENGTH_ARG,
   LINES_PER_SECOND_ARG,
@@ -353,7 +346,7 @@ const appArgs = [
 ];
 
 const log = (...args) => {
-  if (!hasArg(STD_OUT_ARG)) {
+  if (hasArg(FILE_ARG)) {
     console.log(...args);
   }
 };
@@ -450,7 +443,6 @@ const shuffleArg = getArg(SHUFFLE_ARG);
 const alternatesArg = getArg(ALTERNATES_ARG);
 const duplicatesArg = getArg(DUPLICATES_ARG);
 const gzipArg = getArg(GZIP_ARG);
-const stdOutArg = getArg(STD_OUT_ARG);
 const minArg = getArg(MIN_LENGTH_ARG);
 const maxArg = getArg(MAX_LENGTH_ARG);
 const debugArg = getArg(DEBUG_ARG);
@@ -459,13 +451,7 @@ const linesPerSecondArg = getArg(LINES_PER_SECOND_ARG);
 const ignoreCommentsArg = getArg(IGNORE_COMMENTS_ARG);
 const maxLines = limitArg?.value || -1;
 
-if (fileArg && stdOutArg) {
-  console.error(
-    `Only 1 of ${FILE_ARG.name} or ${STD_OUT_ARG.name} can be specified.`
-  );
-  process.exit();
-}
-if (stdOutArg && gzipArg) {
+if (!fileArg && gzipArg) {
   console.error(`stdout cannot be gzipped.`);
   process.exit();
 }
@@ -868,7 +854,7 @@ async function permutateStringsGroup(parts, strings, index) {
     filepath = path.resolve(process.cwd());
   }
   let outputPath = path.join(filepath, filename);
-  const writeStream = stdOutArg
+  const writeStream = !fileArg
     ? process.stdout
     : fs.createWriteStream(outputPath);
   const gzip = gzipArg ? zlib.createGzip() : undefined;
@@ -992,7 +978,7 @@ async function permutateStringsGroup(parts, strings, index) {
       }
 
       lines += 1;
-      if (!stdOutArg && lineCount >= 2000000 && lines % 1000000 === 0) {
+      if (fileArg && lineCount >= 2000000 && lines % 1000000 === 0) {
         log(
           `Wrote line ${prettyNumber(lines + 1)}. ${
             Math.floor((lines / (lineCount * shufflePermutations)) * 1000000) /
