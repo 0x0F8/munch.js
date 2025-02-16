@@ -1006,8 +1006,6 @@ async function permutateStringsGroup(parts, strings, index) {
 				let lineEndings = "\n";
 				if (hasArg(DELIMITER_ARG)) {
 					lineEndings = delimiterArg?.value;
-				} else {
-					lineEndings = file.includes("\r\n") ? "\r\n" : "\n";
 				}
 				const nl = lines === 1 ? "" : lineEndings;
 				yield `${nl}${line}`;
